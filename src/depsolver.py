@@ -101,6 +101,7 @@ class Conflict:
         else:
             return self.name
 
+
 class Constraint:
     def __init__(self, raw_constraint):
         if "+" in raw_constraint:
@@ -146,6 +147,7 @@ class Constraint:
             return self.name + str(self.constraint) + str(self.version)
         else:
             return self.name
+
 
 def parse(package_list):
     dep_list = []
@@ -225,11 +227,11 @@ class Installed:
         self.version = version
 
 
-
 def get_json_array(arg):
     file_object = open(arg)
     json_object = json.loads(file_object.read())
     return json_object
+
 
 def build_init(json):
     init_list = []
@@ -237,6 +239,7 @@ def build_init(json):
         item = i.split("=")
         init_list.append(Installed(item[0], item[1]))
     return init_list
+
 
 def build_repo(json):
     pkg_list = []
@@ -251,11 +254,13 @@ def build_comms(json):
         com_list.append(Command(i))
     return com_list
 
+
 def build_cons(json):
     com_list = []
     for i in json:
         com_list.append(Constraint(i))
     return com_list
+
 
 def build_dict(raw):
     list = []
@@ -270,14 +275,14 @@ def build(x):
         l.append(i)
     return l
 
+
 class System:
-    def __init__(self, constraints, packages, initial =[]):
+    def __init__(self, constraints, packages, initial=[]):
         self.state = self.initalise(initial)
         self.commands = []
         self.constraints = constraints
         self.packages = self.initalise(packages)
-        a = self.packages["A"]
-        b = self.packages["F"]
+        a = self.search_package("B", "3.0", Operator.EQUALS)
         print("done")
 
     def initalise(self, item_list):
@@ -286,10 +291,36 @@ class System:
             item_dict[str(i.name)].append(i)
         return item_dict
 
+    def search_package(self, name, version, operator=Operator.ANY):
+        pkg_set = self.packages[name]
 
+        if operator == Operator.ANY:
+            return pkg_set
+        else:
+            results = []
+            if operator == Operator.LESS_THAN_EQUAL:
+                for i in pkg_set:
+                    if i.version <= version:
+                        results.append(i)
+            elif operator == Operator.GREATER_THAN_EQUAL:
+                for i in pkg_set:
+                    if i.version >= version:
+                        results.append(i)
+            elif operator == Operator.LESS_THAN:
+                for i in pkg_set:
+                    if i.version < version:
+                        results.append(i)
+            elif operator == Operator.GREATER_THAN:
+                for i in pkg_set:
+                    if i.version > version:
+                        results.append(i)
+            elif operator == Operator.EQUALS:
+                for i in pkg_set:
+                    if i.version == version:
+                        results.append(i)
+            return results
 
 def main():
-
     # sys.argv[1]
     repo_object = open("/mnt/file/programming/git/depsolver/src/repository.json")
     repo_root = json.loads(repo_object.read())
@@ -304,7 +335,7 @@ def main():
     constraints_root = json.loads(constraints_object.read())
 
     packages = build_repo(build(repo_root))
-    #commands = build_comms(build(commands_root))
+    # commands = build_comms(build(commands_root))
     constraints = build_cons(build(constraints_root))
     initial_root = build(initial_root)
 
@@ -314,8 +345,7 @@ def main():
     else:
         commands = System(constraints, packages)
 
-
-    #return state
+    # return state
     print("packages:")
     for i in packages:
         print(i)
@@ -325,6 +355,7 @@ def main():
     print("constraints:")
     for i in constraints:
         print(i)
+
 
 if __name__ == "__main__":
     main()
