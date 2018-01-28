@@ -2,6 +2,7 @@ import sys
 import json
 import re
 from enum import Enum
+from collections import defaultdict
 
 
 class Operator(Enum):
@@ -102,6 +103,15 @@ class Conflict:
 
 class Constraint:
     def __init__(self, raw_constraint):
+        if "+" in raw_constraint:
+            temp = raw_constraint.split("+")
+            raw_constraint = str(temp[1])
+            self.operation = Operation.INSTALL
+        elif "-":
+            temp = raw_constraint.split("-")
+            raw_constraint = str(temp[1])
+            self.operation = Operation.REMOVE
+
         if "<=" in raw_constraint:
             split_vals = raw_constraint.split("<=")
             self.name = split_vals[0]
@@ -209,16 +219,24 @@ class Command:
         return str(self.command) + self.name + "=" + str(self.version)
 
 
+class Installed:
+    def __init__(self, name, version):
+        self.name = name
+        self.version = version
+
+
+
 def get_json_array(arg):
     file_object = open(arg)
     json_object = json.loads(file_object.read())
     return json_object
 
 def build_init(json):
-    pkg_list = []
+    init_list = []
     for i in json:
-        pkg_list.append(Package(i))
-    return pkg_list
+        item = i.split("=")
+        init_list.append(Installed(item[0], item[1]))
+    return init_list
 
 def build_repo(json):
     pkg_list = []
@@ -253,11 +271,20 @@ def build(x):
     return l
 
 class System:
-    def __init__(self, initial, commands, constraints, packages):
-        self.state = initial
-        self.commands = commands
+    def __init__(self, constraints, packages, initial =[]):
+        self.state = self.initalise(initial)
+        self.commands = []
         self.constraints = constraints
-        self.packages = packages
+        self.packages = self.initalise(packages)
+        a = self.packages["A"]
+        b = self.packages["F"]
+        print("done")
+
+    def initalise(self, item_list):
+        item_dict = defaultdict(list)
+        for i in item_list:
+            item_dict[str(i.name)].append(i)
+        return item_dict
 
 
 
@@ -279,13 +306,14 @@ def main():
     packages = build_repo(build(repo_root))
     #commands = build_comms(build(commands_root))
     constraints = build_cons(build(constraints_root))
-
     initial_root = build(initial_root)
 
     if len(initial_root) > 0:
-        initial =
+        initial = build_init(initial_root)
+        commands = System(constraints, packages, initial)
+    else:
+        commands = System(constraints, packages)
 
-    #system = System(initial, commands, constraints, packages)
 
     #return state
     print("packages:")
